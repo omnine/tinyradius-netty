@@ -3,19 +3,26 @@ package org.tinyradius.core.packet.request;
 import io.netty.buffer.ByteBuf;
 import org.tinyradius.core.RadiusPacketException;
 import org.tinyradius.core.attribute.type.RadiusAttribute;
+import org.tinyradius.core.attribute.type.VendorSpecificAttribute;
 import org.tinyradius.core.dictionary.Dictionary;
 import org.tinyradius.core.packet.RadiusPacket;
 
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import javax.crypto.Cipher;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
+
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
- * CHAP AccessRequest RFC2865
+ * https://insinuator.net/2013/08/vulnerabilities-attack-vectors-of-vpns-pt-1/
+ * https://www.schneier.com/wp-content/uploads/2015/12/paper-pptpv2.pdf
  */
 public class AccessRequestMSChapV2 extends AccessRequest {
 
@@ -44,7 +51,9 @@ public class AccessRequestMSChapV2 extends AccessRequest {
         if (password == null || password.isEmpty())
             throw new IllegalArgumentException("Could not encode CHAP attributes, password not set");
 
-        final byte[] challenge = random16bytes();
+        // MS-CHAP-Challenge    
+        // This Attribute contains the challenge sent by a NAS to a Microsoft Challenge-Handshake Authentication Protocol (MS-CHAP) user.
+        final byte[] challenge = random16bytes();   // MS-CHAP-CHALLENGE,
 
         final List<RadiusAttribute> newAttributes = attributes.stream()
                 .filter(a -> !(a.getVendorId() == -1 && a.getType() == CHAP_PASSWORD)
@@ -58,20 +67,30 @@ public class AccessRequestMSChapV2 extends AccessRequest {
 
 
         String challengeHex = "0123456789ABCDEF"; // Replace with your actual challenge value
-        String password = "MyPassword123"; // Replace with your actual password
+//        String password = "MyPassword123"; // Replace with your actual password
         
         try {
-            byte[] challenge = DatatypeConverter.parseHexBinary(challengeHex);
             byte[] passwordBytes = password.getBytes("UTF-16LE");
+
+            byte[] ntHash = hashNt(passwordBytes);
+
+            final byte[] peerChallenge = random16bytes(); 
+
+            byte[] challenge8 = ChallengeHash(peerChallenge, challenge, "nanoart")
             
-            byte[] ntResponse = calculateNTResponse(challenge, passwordBytes);
-            byte[] msChap2Challenge = calculateMSCHAP2Challenge(challenge, ntResponse);
+            byte[] ntResponse = ChallengeResponse(challenge8,ntHash);
+
+            //https://freeradius.org/rfc/rfc2548.html
+            byte[] msChap2Challenge = calculateMSCHAP2Response(peerChallenge, ntResponse);
             
-            String ntResponseHex = DatatypeConverter.printHexBinary(ntResponse);
-            String msChap2ChallengeHex = DatatypeConverter.printHexBinary(msChap2Challenge);
-            
-            System.out.println("NT Response: " + ntResponseHex);
-            System.out.println("MS-CHAP2-CHALLENGE: " + msChap2ChallengeHex);
+
+            //vendorID 311, Microsoft
+            VendorSpecificAttribute vsa = new VendorSpecificAttribute(dictionary, 311, Arrays.asList(
+                dictionary.createAttribute(311, 11,challenge),
+                dictionary.createAttribute(311, 25,msChap2Challenge)
+            ));
+            newAttributes.add(vsa);
+
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -148,24 +167,78 @@ public class AccessRequestMSChapV2 extends AccessRequest {
             throw new RadiusPacketException("AccessRequest (CHAP) should have exactly one CHAP-Password attribute, has " + count);
         // CHAP-Challenge can use Request Authenticator instead of attribute
     }
-
-    private static byte[] calculateNTResponse(byte[] challenge, byte[] passwordBytes)
-            throws NoSuchAlgorithmException {
-        MessageDigest md4 = MessageDigest.getInstance("MD4");
-        byte[] passwordHash = md4.digest(passwordBytes);
-        
-        byte[] combinedHash = new byte[passwordHash.length + challenge.length];
-        System.arraycopy(passwordHash, 0, combinedHash, 0, passwordHash.length);
-        System.arraycopy(challenge, 0, combinedHash, passwordHash.length, challenge.length);
-        
-        byte[] ntResponse = md4.digest(combinedHash);
-        return ntResponse;
-    }
-    
-    private static byte[] calculateMSCHAP2Challenge(byte[] challenge, byte[] ntResponse) {
-        byte[] msChap2Challenge = new byte[challenge.length + ntResponse.length];
-        System.arraycopy(challenge, 0, msChap2Challenge, 0, challenge.length);
-        System.arraycopy(ntResponse, 0, msChap2Challenge, challenge.length, ntResponse.length);
+   
+    private static byte[] calculateMSCHAP2Response(byte[] peerChallenge, byte[] ntResponse) {
+        byte[] msChap2Challenge = new byte[50];
+        msChap2Challenge[0] = 1;    //ident for mschap2
+        System.arraycopy(peerChallenge, 0, msChap2Challenge, 2, peerChallenge.length);  //16
+        System.arraycopy(ntResponse, 0, msChap2Challenge, 26, ntResponse.length);   //24
         return msChap2Challenge;
+    }   
+
+    private byte[] ChallengeHash(byte[] PeerChallenge,  byte[]  AuthenticatorChallenge, String UserName)
+    {           
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-1");
+            md.update(PeerChallenge);   // 16 bytes
+            md.update(AuthenticatorChallenge);
+            
+            byte[] fullDigest =  md.digest(UserName.getBytes());
+            byte[] Challenge = new byte[8];
+
+            System.arraycopy(fullDigest, 0, Challenge, 0, 8);
+            return Challenge;
+            
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+            return null;
+        }       
+     
+    }    
+    
+    private byte[] ChallengeResponse(byte[]  Challenge,  byte[]  PasswordHash)
+    {
+       // Set ZPasswordHash to PasswordHash zero-padded to 21 octets
+        byte[] key = new byte[7];
+        byte[] Response = new byte[24];
+        byte[] ZPasswordHash = new byte[21];    // In java all elements(primitive integer types byte short, int, long) are initialised to 0 by default
+        System.arraycopy(PasswordHash, 0, Response, 0, 16);
+        try {
+            Cipher cipher = Cipher.getInstance("DES/ECB/NoPadding");    //Challenge 8 byte, so no padding is OK
+
+            System.arraycopy(key, 0, ZPasswordHash, 0, 7);
+            SecretKey keySpec = new SecretKeySpec(key, "DES");
+            cipher.init(Cipher.ENCRYPT_MODE, keySpec);
+            byte[] out =  cipher.doFinal(Challenge);
+            System.arraycopy(out, 0, Response, 0, 8);
+
+            System.arraycopy(key, 0, ZPasswordHash, 7, 7);
+            keySpec = new SecretKeySpec(key, "DES");
+            cipher.init(Cipher.ENCRYPT_MODE, keySpec);
+            out =  cipher.doFinal(Challenge);
+            System.arraycopy(out, 0, Response, 8, 8);
+
+            System.arraycopy(key, 0, ZPasswordHash, 14, 7);
+            keySpec = new SecretKeySpec(key, "DES");
+            cipher.init(Cipher.ENCRYPT_MODE, keySpec);
+            out =  cipher.doFinal(Challenge);
+            System.arraycopy(out, 0, Response, 16, 8);
+            return Response;
+
+        } catch (GeneralSecurityException e) {
+            e.printStackTrace();
+            return null;
+        }
+    
+    }
+
+    private static byte[] hashNt(byte[] unicodePassword) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("MD4");
+            return md.digest(unicodePassword);
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+            return null;
+        }
     }    
 }
