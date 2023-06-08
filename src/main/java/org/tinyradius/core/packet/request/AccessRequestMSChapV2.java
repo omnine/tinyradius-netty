@@ -8,6 +8,7 @@ import org.tinyradius.core.dictionary.Dictionary;
 import org.tinyradius.core.packet.RadiusPacket;
 
 import java.nio.ByteBuffer;
+import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
@@ -64,10 +65,6 @@ public class AccessRequestMSChapV2 extends AccessRequest {
         newAttributes.add(dictionary.createAttribute(-1, CHAP_PASSWORD,
                 computeChapPassword((byte) RANDOM.nextInt(256), password, challenge)));
 
-
-
-        String challengeHex = "0123456789ABCDEF"; // Replace with your actual challenge value
-//        String password = "MyPassword123"; // Replace with your actual password
         
         try {
             byte[] passwordBytes = password.getBytes("UTF-16LE");
@@ -76,7 +73,7 @@ public class AccessRequestMSChapV2 extends AccessRequest {
 
             final byte[] peerChallenge = random16bytes(); 
 
-            byte[] challenge8 = ChallengeHash(peerChallenge, challenge, "nanoart")
+            byte[] challenge8 = ChallengeHash(peerChallenge, challenge, "nanoart");
             
             byte[] ntResponse = ChallengeResponse(challenge8,ntHash);
 
@@ -176,7 +173,7 @@ public class AccessRequestMSChapV2 extends AccessRequest {
         return msChap2Challenge;
     }   
 
-    private byte[] ChallengeHash(byte[] PeerChallenge,  byte[]  AuthenticatorChallenge, String UserName)
+    private static byte[] ChallengeHash(byte[] PeerChallenge,  byte[]  AuthenticatorChallenge, String UserName)
     {           
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-1");
@@ -196,7 +193,7 @@ public class AccessRequestMSChapV2 extends AccessRequest {
      
     }    
     
-    private byte[] ChallengeResponse(byte[]  Challenge,  byte[]  PasswordHash)
+    private static byte[] ChallengeResponse(byte[]  Challenge,  byte[]  PasswordHash)
     {
        // Set ZPasswordHash to PasswordHash zero-padded to 21 octets
         byte[] key = new byte[7];
