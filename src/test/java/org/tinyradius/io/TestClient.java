@@ -12,10 +12,7 @@ import org.apache.logging.log4j.Logger;
 import org.tinyradius.core.RadiusPacketException;
 import org.tinyradius.core.dictionary.DefaultDictionary;
 import org.tinyradius.core.dictionary.Dictionary;
-import org.tinyradius.core.packet.request.AccessRequest;
-import org.tinyradius.core.packet.request.AccessRequestPap;
-import org.tinyradius.core.packet.request.AccountingRequest;
-import org.tinyradius.core.packet.request.RadiusRequest;
+import org.tinyradius.core.packet.request.*;
 import org.tinyradius.core.packet.response.RadiusResponse;
 import org.tinyradius.io.client.RadiusClient;
 import org.tinyradius.io.client.handler.BlacklistHandler;
@@ -76,13 +73,13 @@ public class TestClient {
         final RadiusEndpoint acctEndpoint = new RadiusEndpoint(new InetSocketAddress(host, 1813), shared);
 
         // 1. Send Access-Request
-        final AccessRequestPap ar = (AccessRequestPap)
+        final AccessRequestMSChapV2 ar = (AccessRequestMSChapV2)
                 ((AccessRequest) RadiusRequest.create(dictionary, ACCESS_REQUEST, (byte) 1, null, Collections.emptyList()))
-                .withPapPassword(pass)
+                .withMSCHapv2Password(user, pass)
                 .addAttribute("User-Name", user)
-                .addAttribute("NAS-Identifier", "this.is.my.nas-identifier.de")
-                .addAttribute("NAS-IP-Address", "192.168.0.100")
-                .addAttribute("Service-Type", "Login-User");
+                .addAttribute("NAS-IP-Address", "10.8.1.10");
+//                .addAttribute("NAS-Identifier", "this.is.my.nas-identifier.de")
+//                .addAttribute("Service-Type", "Login-User");
 //                .addAttribute("WISPr-Redirection-URL", "https://www.sourceforge.net/")
 //                .addAttribute("WISPr-Location-ID", "net.sourceforge.ap1");
 

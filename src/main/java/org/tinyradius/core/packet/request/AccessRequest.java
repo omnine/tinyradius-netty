@@ -138,6 +138,11 @@ public abstract class AccessRequest extends GenericRequest implements MessageAut
         return AccessRequestPap.withPassword(withoutAuths(), password);
     }
 
+
+    public AccessRequest withMSCHapv2Password(String username, String password) throws RadiusPacketException {
+        return AccessRequestMSChapV2.withPassword(withoutAuths(), username, password);
+    }
+
     /**
      * https://tools.ietf.org/html/rfc2869
      * <p>

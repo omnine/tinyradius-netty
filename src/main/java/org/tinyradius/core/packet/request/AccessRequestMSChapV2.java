@@ -33,8 +33,8 @@ public class AccessRequestMSChapV2 extends AccessRequest {
         super(dictionary, header, attributes);
     }
 
-    static AccessRequest withPassword(AccessRequest request, String password) throws RadiusPacketException {
-        final List<RadiusAttribute> attributes = withPasswordAttribute(request.getDictionary(), request.getAttributes(), password);
+    static AccessRequest withPassword(AccessRequest request, String username, String password) throws RadiusPacketException {
+        final List<RadiusAttribute> attributes = withPasswordAttribute(request.getDictionary(), request.getAttributes(), username, password);
         final ByteBuf header = RadiusPacket.buildHeader(request.getType(), request.getId(), request.getAuthenticator(), attributes);
         return create(request.getDictionary(), header, attributes);
     }
@@ -48,32 +48,30 @@ public class AccessRequestMSChapV2 extends AccessRequest {
      * @return AccessRequestChap with encoded CHAP-Password and CHAP-Challenge attributes
      * @throws IllegalArgumentException invalid password
      */
-    private static List<RadiusAttribute> withPasswordAttribute(Dictionary dictionary, List<RadiusAttribute> attributes, String password) {
+    private static List<RadiusAttribute> withPasswordAttribute(Dictionary dictionary, List<RadiusAttribute> attributes, String username, String password) {
         if (password == null || password.isEmpty())
             throw new IllegalArgumentException("Could not encode CHAP attributes, password not set");
 
         // MS-CHAP-Challenge    
         // This Attribute contains the challenge sent by a NAS to a Microsoft Challenge-Handshake Authentication Protocol (MS-CHAP) user.
+        //These two should be passed in as parameters
         final byte[] challenge = random16bytes();   // MS-CHAP-CHALLENGE,
+        final byte[] peerChallenge = random16bytes();
 
         final List<RadiusAttribute> newAttributes = attributes.stream()
                 .filter(a -> !(a.getVendorId() == -1 && a.getType() == CHAP_PASSWORD)
                         && !(a.getVendorId() == -1 && a.getType() == CHAP_CHALLENGE))
                 .collect(Collectors.toList());
 
-        newAttributes.add(dictionary.createAttribute(-1, CHAP_CHALLENGE, challenge));
-        newAttributes.add(dictionary.createAttribute(-1, CHAP_PASSWORD,
-                computeChapPassword((byte) RANDOM.nextInt(256), password, challenge)));
 
-        
         try {
             byte[] passwordBytes = password.getBytes("UTF-16LE");
 
             byte[] ntHash = hashNt(passwordBytes);
 
-            final byte[] peerChallenge = random16bytes(); 
 
-            byte[] challenge8 = ChallengeHash(peerChallenge, challenge, "nanoart");
+
+            byte[] challenge8 = ChallengeHash(peerChallenge, challenge, username);
             
             byte[] ntResponse = ChallengeResponse(challenge8,ntHash);
 
