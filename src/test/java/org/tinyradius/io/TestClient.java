@@ -65,7 +65,7 @@ public class TestClient {
                 ch.pipeline().addLast(
                         new ClientDatagramCodec(dictionary),
                         new PromiseAdapter(),
-                        new BlacklistHandler(60_000, 3));
+                        new BlacklistHandler(5000, 3));
             }
         });
 
