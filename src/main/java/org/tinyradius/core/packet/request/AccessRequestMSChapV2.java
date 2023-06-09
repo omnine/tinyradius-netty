@@ -6,6 +6,7 @@ import org.tinyradius.core.attribute.type.RadiusAttribute;
 import org.tinyradius.core.attribute.type.VendorSpecificAttribute;
 import org.tinyradius.core.dictionary.Dictionary;
 import org.tinyradius.core.packet.RadiusPacket;
+import org.tinyradius.core.packet.util.MD4;
 
 import java.nio.ByteBuffer;
 import java.security.GeneralSecurityException;
@@ -228,12 +229,6 @@ public class AccessRequestMSChapV2 extends AccessRequest {
     }
 
     private static byte[] hashNt(byte[] unicodePassword) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("MD4");
-            return md.digest(unicodePassword);
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-            return null;
-        }
-    }    
+        return MD4.mdfour(unicodePassword);
+    }
 }
