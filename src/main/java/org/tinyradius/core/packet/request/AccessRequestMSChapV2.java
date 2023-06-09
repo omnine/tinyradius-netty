@@ -10,6 +10,7 @@ import org.tinyradius.core.packet.util.MD4;
 
 import java.nio.ByteBuffer;
 import java.security.GeneralSecurityException;
+import java.security.Key;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
@@ -190,42 +191,54 @@ public class AccessRequestMSChapV2 extends AccessRequest {
             return null;
         }       
      
-    }    
-    
-    private static byte[] ChallengeResponse(byte[]  Challenge,  byte[]  PasswordHash)
+    }
+
+
+    private static byte[] ChallengeResponse(final byte[] Challenge, final byte[] PasswordHash) throws GeneralSecurityException
     {
-       // Set ZPasswordHash to PasswordHash zero-padded to 21 octets
-        byte[] key = new byte[7];
-        byte[] Response = new byte[24];
-        byte[] ZPasswordHash = new byte[21];    // In java all elements(primitive integer types byte short, int, long) are initialised to 0 by default
-        System.arraycopy(PasswordHash, 0, Response, 0, 16);
-        try {
-            Cipher cipher = Cipher.getInstance("DES/ECB/NoPadding");    //Challenge 8 byte, so no padding is OK
+        byte Response[] = new byte[24];
+        byte ZPasswordHash[] = new byte[21];
 
-            System.arraycopy(key, 0, ZPasswordHash, 0, 7);
-            SecretKey keySpec = new SecretKeySpec(key, "DES");
-            cipher.init(Cipher.ENCRYPT_MODE, keySpec);
-            byte[] out =  cipher.doFinal(Challenge);
-            System.arraycopy(out, 0, Response, 0, 8);
+        for (int i = 0; i < 16; i++)
+            ZPasswordHash[i] = PasswordHash[i];
 
-            System.arraycopy(key, 0, ZPasswordHash, 7, 7);
-            keySpec = new SecretKeySpec(key, "DES");
-            cipher.init(Cipher.ENCRYPT_MODE, keySpec);
-            out =  cipher.doFinal(Challenge);
-            System.arraycopy(out, 0, Response, 8, 8);
+        for (int i = 16; i < 21; i++)
+            ZPasswordHash[i] = 0;
 
-            System.arraycopy(key, 0, ZPasswordHash, 14, 7);
-            keySpec = new SecretKeySpec(key, "DES");
-            cipher.init(Cipher.ENCRYPT_MODE, keySpec);
-            out =  cipher.doFinal(Challenge);
-            System.arraycopy(out, 0, Response, 16, 8);
-            return Response;
+        DesEncrypt(Challenge, 0, ZPasswordHash, 0, Response, 0);
+        DesEncrypt(Challenge, 0, ZPasswordHash, 7, Response, 8);
+        DesEncrypt(Challenge, 0, ZPasswordHash, 14, Response, 16);
 
-        } catch (GeneralSecurityException e) {
-            e.printStackTrace();
-            return null;
+        return Response;
+    }
+
+    private static void parity_key(byte[] szOut, final byte[] szIn, final int offset)
+    {
+        int i;
+        int cNext = 0;
+        int cWorking = 0;
+
+        for (i = 0; i < 7; i++)
+        {
+            cWorking = 0xFF & szIn[i + offset];
+            szOut[i] = (byte)(((cWorking >> i) | cNext | 1) & 0xff);
+            cWorking = 0xFF & szIn[i + offset];
+            cNext    = ((cWorking << (7 - i)));
         }
-    
+
+        szOut[i] = (byte) (cNext | 1);
+    }
+    private static void DesEncrypt(byte[] Clear, int clearOffset, byte[] Key, int keyOffset, byte[] Cypher, int cypherOffset) throws GeneralSecurityException
+    {
+        byte szParityKey[] = new byte[8];
+        parity_key(szParityKey, Key, keyOffset);
+
+        Cipher cipher = Cipher.getInstance("DES/ECB/NoPadding");
+
+        java.security.Key key = new SecretKeySpec(szParityKey, "DES");
+        cipher.init(Cipher.ENCRYPT_MODE, key);
+
+        cipher.doFinal(Clear, clearOffset, 8, Cypher, cypherOffset);
     }
 
     private static byte[] hashNt(byte[] unicodePassword) {
