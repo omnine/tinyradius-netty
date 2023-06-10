@@ -73,7 +73,7 @@ public class TestClient {
         final RadiusEndpoint acctEndpoint = new RadiusEndpoint(new InetSocketAddress(host, 1813), shared);
 
         // 1. Send Access-Request
-        final AccessRequestMSChapV2 ar = (AccessRequestMSChapV2)
+        final AccessRequest ar = (AccessRequest)
                 ((AccessRequest) RadiusRequest.create(dictionary, ACCESS_REQUEST, (byte) 1, null, Collections.emptyList()))
                 .withMSCHapv2Password(user, pass)
                 .addAttribute("User-Name", user)

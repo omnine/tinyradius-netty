@@ -10,7 +10,6 @@ import org.tinyradius.core.packet.util.MD4;
 
 import java.nio.ByteBuffer;
 import java.security.GeneralSecurityException;
-import java.security.Key;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
@@ -18,7 +17,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import javax.crypto.Cipher;
-import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -28,8 +26,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  * https://www.schneier.com/wp-content/uploads/2015/12/paper-pptpv2.pdf
  */
 public class AccessRequestMSChapV2 extends AccessRequest {
-
-    private static final byte CHAP_CHALLENGE = 60;
 
     public AccessRequestMSChapV2(Dictionary dictionary, ByteBuf header, List<RadiusAttribute> attributes) throws RadiusPacketException {
         super(dictionary, header, attributes);
@@ -61,8 +57,7 @@ public class AccessRequestMSChapV2 extends AccessRequest {
         final byte[] peerChallenge = random16bytes();
 
         final List<RadiusAttribute> newAttributes = attributes.stream()
-                .filter(a -> !(a.getVendorId() == -1 && a.getType() == CHAP_PASSWORD)
-                        && !(a.getVendorId() == -1 && a.getType() == CHAP_CHALLENGE))
+                .filter(a -> a.getVendorId() != -1 || a.getType() != USER_PASSWORD)
                 .collect(Collectors.toList());
 
 
@@ -128,34 +123,6 @@ public class AccessRequestMSChapV2 extends AccessRequest {
                 .put(chapId)
                 .put(md5.digest())
                 .array();
-    }
-
-    /**
-     * Checks that the passed plain-text password matches the password
-     * (hash) send with this Access-Request packet.
-     *
-     * @param password plaintext password to verify packet against
-     * @return true if the password is valid, false otherwise
-     */
-    public boolean checkPassword(String password) {
-        if (password == null || password.isEmpty()) {
-            logger.warn("Plaintext password to check against is empty");
-            return false;
-        }
-
-        final byte[] chapChallenge = getAttribute(CHAP_CHALLENGE)
-                .map(RadiusAttribute::getValue)
-                .orElse(getAuthenticator());
-
-        final byte[] chapPassword = getAttribute(CHAP_PASSWORD)
-                .map(RadiusAttribute::getValue)
-                .orElse(null);
-        if (chapPassword == null || chapPassword.length != 17) {
-            logger.warn("CHAP-Password must be 17 bytes");
-            return false;
-        }
-
-        return Arrays.equals(chapPassword, computeChapPassword(chapPassword[0], password, chapChallenge));
     }
 
     private void validateChapAttributes() throws RadiusPacketException {
