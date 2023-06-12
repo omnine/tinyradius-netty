@@ -70,14 +70,14 @@ public class TestClient {
         });
 
         final RadiusEndpoint authEndpoint = new RadiusEndpoint(new InetSocketAddress(host, 1812), shared);
-        final RadiusEndpoint acctEndpoint = new RadiusEndpoint(new InetSocketAddress(host, 1813), shared);
+//        final RadiusEndpoint acctEndpoint = new RadiusEndpoint(new InetSocketAddress(host, 1813), shared);
 
         // 1. Send Access-Request
         final AccessRequest ar = (AccessRequest)
                 ((AccessRequest) RadiusRequest.create(dictionary, ACCESS_REQUEST, (byte) 1, null, Collections.emptyList()))
                 .withMSCHapv2Password(user, pass)
                 .addAttribute("User-Name", user)
-                .addAttribute("NAS-IP-Address", "10.8.1.10");
+                .addAttribute("NAS-IP-Address", "192.168.222.1");
 //                .addAttribute("NAS-Identifier", "this.is.my.nas-identifier.de")
 //                .addAttribute("Service-Type", "Login-User");
 //                .addAttribute("WISPr-Redirection-URL", "https://www.sourceforge.net/")
@@ -89,6 +89,7 @@ public class TestClient {
         logger.info("Response\n" + response + "\n");
 
         // 2. Send Accounting-Request
+        /*
         final AccountingRequest acc = (AccountingRequest) RadiusRequest.create(dictionary, ACCOUNTING_REQUEST, (byte) 2, null, new ArrayList<>())
                 .addAttribute("User-Name", "username")
                 .addAttribute("Acct-Status-Type", "1")
@@ -99,7 +100,7 @@ public class TestClient {
         logger.info(acc + "\n");
         response = rc.communicate(acc, acctEndpoint).syncUninterruptibly().getNow();
         logger.info("Response: " + response);
-
+*/
         rc.close();
     }
 }
