@@ -64,7 +64,7 @@ public class TestClient {
             protected void initChannel(DatagramChannel ch) {
                 ch.pipeline().addLast(
                         new ClientDatagramCodec(dictionary),
-                        new PromiseAdapter(),
+//                        new PromiseAdapter(),
                         new BlacklistHandler(5000, 3));
             }
         });
