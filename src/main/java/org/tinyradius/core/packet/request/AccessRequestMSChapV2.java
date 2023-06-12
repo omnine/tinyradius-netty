@@ -5,6 +5,7 @@ import org.tinyradius.core.RadiusPacketException;
 import org.tinyradius.core.attribute.type.RadiusAttribute;
 import org.tinyradius.core.attribute.type.VendorSpecificAttribute;
 import org.tinyradius.core.dictionary.Dictionary;
+import org.tinyradius.core.dictionary.parser.DictionaryParser;
 import org.tinyradius.core.packet.RadiusPacket;
 import org.tinyradius.core.packet.util.MD4;
 
@@ -20,6 +21,8 @@ import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.tinyradius.core.attribute.type.AttributeType.VSA;
+import static org.tinyradius.core.attribute.type.VendorSpecificAttribute.VENDOR_SPECIFIC;
 
 /**
  * https://insinuator.net/2013/08/vulnerabilities-attack-vectors-of-vpns-pt-1/
@@ -77,9 +80,11 @@ public class AccessRequestMSChapV2 extends AccessRequest {
             
 
             //vendorID 311, Microsoft
-            VendorSpecificAttribute vsa = new VendorSpecificAttribute(dictionary, 311, Arrays.asList(
-                dictionary.createAttribute(311, 11,challenge),
-                dictionary.createAttribute(311, 25,msChap2Challenge)
+            Dictionary dictionaryMS = DictionaryParser.newClasspathParser().parseDictionary("org/tinyradius/core/dictionary/freeradius/dictionary.microsoft");
+
+            VendorSpecificAttribute vsa = new VendorSpecificAttribute(dictionaryMS, 311, Arrays.asList(
+                    dictionaryMS.createAttribute(311, 11,challenge),
+                    dictionaryMS.createAttribute(311, 25,msChap2Challenge)
             ));
             newAttributes.add(vsa);
 
