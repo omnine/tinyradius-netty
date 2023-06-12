@@ -17,15 +17,13 @@ import org.tinyradius.core.packet.response.RadiusResponse;
 import org.tinyradius.io.client.RadiusClient;
 import org.tinyradius.io.client.handler.BlacklistHandler;
 import org.tinyradius.io.client.handler.ClientDatagramCodec;
-import org.tinyradius.io.client.handler.PromiseAdapter;
 import org.tinyradius.io.client.timeout.FixedTimeoutHandler;
 
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
 import java.util.Collections;
 
 import static org.tinyradius.core.packet.PacketType.ACCESS_REQUEST;
-import static org.tinyradius.core.packet.PacketType.ACCOUNTING_REQUEST;
+
 
 
 /**
@@ -88,8 +86,19 @@ public class TestClient {
         logger.info("Packet after it was sent\n" + ar + "\n");
         logger.info("Response\n" + response + "\n");
 
-        // 2. Send Accounting-Request
         /*
+
+
+
+        final Future<RadiusResponse> future = rc.communicate(ar, authEndpoint);
+
+        await().until(future::isDone);
+//        assertTrue(future.isSuccess());
+//        assertSame(response, future.getNow());
+        logger.info("Response\n" + future.getNow() + "\n");
+
+        // 2. Send Accounting-Request
+
         final AccountingRequest acc = (AccountingRequest) RadiusRequest.create(dictionary, ACCOUNTING_REQUEST, (byte) 2, null, new ArrayList<>())
                 .addAttribute("User-Name", "username")
                 .addAttribute("Acct-Status-Type", "1")
