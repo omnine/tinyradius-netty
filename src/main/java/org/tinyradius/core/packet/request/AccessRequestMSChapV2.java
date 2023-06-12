@@ -14,6 +14,7 @@ import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -82,8 +83,12 @@ public class AccessRequestMSChapV2 extends AccessRequest {
             //vendorID 311, Microsoft
             Dictionary dictionaryMS = DictionaryParser.newClasspathParser().parseDictionary("org/tinyradius/core/dictionary/freeradius/dictionary.microsoft");
 
-            VendorSpecificAttribute vsa = new VendorSpecificAttribute(dictionaryMS, 311, Arrays.asList(
-                    dictionaryMS.createAttribute(311, 11,challenge),
+            VendorSpecificAttribute vsa = new VendorSpecificAttribute(dictionaryMS, 311, Collections.singletonList(
+                    dictionaryMS.createAttribute(311, 11,challenge)
+            ));
+            newAttributes.add(vsa);
+
+            vsa = new VendorSpecificAttribute(dictionaryMS, 311, Collections.singletonList(
                     dictionaryMS.createAttribute(311, 25,msChap2Challenge)
             ));
             newAttributes.add(vsa);
