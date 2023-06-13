@@ -17,6 +17,7 @@ import org.tinyradius.core.packet.response.RadiusResponse;
 import org.tinyradius.io.client.RadiusClient;
 import org.tinyradius.io.client.handler.BlacklistHandler;
 import org.tinyradius.io.client.handler.ClientDatagramCodec;
+import org.tinyradius.io.client.handler.PromiseAdapter;
 import org.tinyradius.io.client.timeout.FixedTimeoutHandler;
 
 import java.net.InetSocketAddress;
@@ -62,8 +63,8 @@ public class TestClient {
             protected void initChannel(DatagramChannel ch) {
                 ch.pipeline().addLast(
                         new ClientDatagramCodec(dictionary),
-//                        new PromiseAdapter(),
-                        new BlacklistHandler(5000, 3));
+                        new PromiseAdapter(),
+                        new BlacklistHandler(60_000, 3));
             }
         });
 
