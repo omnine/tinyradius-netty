@@ -62,7 +62,7 @@ public class TestClient {
         final Bootstrap bootstrap = new Bootstrap().group(eventLoopGroup).channel(NioDatagramChannel.class);
 
         final RadiusClient rc = new RadiusClient(
-                bootstrap, new InetSocketAddress(0), new FixedTimeoutHandler(timer), new ChannelInitializer<DatagramChannel>() {
+                bootstrap, new InetSocketAddress(0), new FixedTimeoutHandler(timer, 1, 5000), new ChannelInitializer<DatagramChannel>() {
             @Override
             protected void initChannel(DatagramChannel ch) {
                 ch.pipeline().addLast(
@@ -80,17 +80,17 @@ public class TestClient {
                 ((AccessRequest) RadiusRequest.create(dictionary, ACCESS_REQUEST, (byte) 1, null, Collections.emptyList()))
                 .withPapPassword(pass)
                 .addAttribute("User-Name", user)
-                .addAttribute("NAS-Identifier", "this.is.my.nas-identifier.de")
-                .addAttribute("NAS-IP-Address", "192.168.0.100")
-                .addAttribute("Service-Type", "Login-User")
-                .addAttribute("WISPr-Redirection-URL", "https://www.sourceforge.net/")
-                .addAttribute("WISPr-Location-ID", "net.sourceforge.ap1");
+//                .addAttribute("NAS-Identifier", "this.is.my.nas-identifier.de")
+                .addAttribute("NAS-IP-Address", "192.168.222.1");
+//                .addAttribute("Service-Type", "Login-User")
+//                .addAttribute("WISPr-Redirection-URL", "https://www.sourceforge.net/")
+//                .addAttribute("WISPr-Location-ID", "net.sourceforge.ap1");
 
         logger.info("Packet before it is sent\n" + ar + "\n");
         RadiusResponse response = rc.communicate(ar, authEndpoint).syncUninterruptibly().getNow();
         logger.info("Packet after it was sent\n" + ar + "\n");
         logger.info("Response\n" + response + "\n");
-
+/*
         // 2. Send Accounting-Request
         final AccountingRequest acc = (AccountingRequest) RadiusRequest.create(dictionary, ACCOUNTING_REQUEST, (byte) 2, null, new ArrayList<>())
                 .addAttribute("User-Name", "username")
@@ -102,7 +102,7 @@ public class TestClient {
         logger.info(acc + "\n");
         response = rc.communicate(acc, acctEndpoint).syncUninterruptibly().getNow();
         logger.info("Response: " + response);
-
+*/
         rc.close();
     }
 }
