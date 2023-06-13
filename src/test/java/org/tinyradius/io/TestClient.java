@@ -20,6 +20,9 @@ import org.tinyradius.io.client.handler.ClientDatagramCodec;
 import org.tinyradius.io.client.handler.PromiseAdapter;
 import org.tinyradius.io.client.timeout.FixedTimeoutHandler;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
 import java.util.Collections;
 
@@ -82,10 +85,39 @@ public class TestClient {
 //                .addAttribute("WISPr-Redirection-URL", "https://www.sourceforge.net/")
 //                .addAttribute("WISPr-Location-ID", "net.sourceforge.ap1");
 
-        logger.info("Packet before it is sent\n" + ar + "\n");
+        // Enter data using BufferReader
+        BufferedReader reader = new BufferedReader(
+                new InputStreamReader(System.in));
+
+        // Reading data using readLine
+        System.out.println("Please enter OTP code:");
+        String otpCode = "123456";
+        try {
+            otpCode = reader.readLine();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        // Printing the read line
+        System.out.println(otpCode);
+
+
+//        logger.info("Packet before it is sent\n" + ar + "\n");
         RadiusResponse response = rc.communicate(ar, authEndpoint).syncUninterruptibly().getNow();
-        logger.info("Packet after it was sent\n" + ar + "\n");
+//        logger.info("Packet after it was sent\n" + ar + "\n");
         logger.info("Response\n" + response + "\n");
+
+        if (response.getType() == 11) {
+            final AccessRequest ar2 = (AccessRequest)
+                    ((AccessRequest) RadiusRequest.create(dictionary, ACCESS_REQUEST, (byte) 1, null, Collections.emptyList()))
+                            .withMSCHapv2Password(user, otpCode)
+                            .addAttribute("User-Name", user)
+                            .addAttribute("NAS-IP-Address", "192.168.222.1");
+
+            RadiusResponse response2 = rc.communicate(ar2, authEndpoint).syncUninterruptibly().getNow();
+            logger.info("Response\n" + response2 + "\n");
+
+        }
 
         /*
 
