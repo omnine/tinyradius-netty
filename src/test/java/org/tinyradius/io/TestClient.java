@@ -108,12 +108,25 @@ public class TestClient {
         logger.info("Response\n" + response + "\n");
 
         if (response.getType() == 11) {
+            byte[] state = response.getAttribute(24).get().getValue();
+            /*
             final AccessRequest ar2 = (AccessRequest)
                     ((AccessRequest) RadiusRequest.create(dictionary, ACCESS_REQUEST, (byte) 1, null, Collections.emptyList()))
                             .withMSCHapv2Password(user, otpCode)
                             .addAttribute("User-Name", user)
                             .addAttribute("NAS-IP-Address", "192.168.222.1");
 
+            RadiusResponse response2 = rc.communicate(ar2, authEndpoint).syncUninterruptibly().getNow();
+            logger.info("Response\n" + response2 + "\n");
+*/
+
+            // 1. Send Access-Request
+            final AccessRequestPap ar2 = (AccessRequestPap)
+                    ((AccessRequest) RadiusRequest.create(dictionary, ACCESS_REQUEST, (byte) 1, null, Collections.emptyList()))
+                            .withPapPassword(otpCode)
+                            .addAttribute("User-Name", user)
+                            .addAttribute(dictionary.createAttribute(-1, 24, state))
+                            .addAttribute("NAS-IP-Address", "192.168.222.1");
             RadiusResponse response2 = rc.communicate(ar2, authEndpoint).syncUninterruptibly().getNow();
             logger.info("Response\n" + response2 + "\n");
 
