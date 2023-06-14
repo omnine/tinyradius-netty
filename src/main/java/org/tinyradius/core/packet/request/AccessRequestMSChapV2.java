@@ -13,7 +13,6 @@ import java.nio.ByteBuffer;
 import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -22,8 +21,6 @@ import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.tinyradius.core.attribute.type.AttributeType.VSA;
-import static org.tinyradius.core.attribute.type.VendorSpecificAttribute.VENDOR_SPECIFIC;
 
 /**
  * https://insinuator.net/2013/08/vulnerabilities-attack-vectors-of-vpns-pt-1/
@@ -42,12 +39,10 @@ public class AccessRequestMSChapV2 extends AccessRequest {
     }
 
     /**
-     * Set CHAP-Password / CHAP-Challenge attributes with provided password.
-     * <p>
-     * Will remove existing attributes if exists already
-     *
-     * @param password plaintext password to encode into CHAP-Password
-     * @return AccessRequestChap with encoded CHAP-Password and CHAP-Challenge attributes
+     * Set MS-CHAP-Challenge / MS-CHAP2-Response attributes with provided username and password.
+     * @param username Username
+     * @param password plaintext password
+     * @return AccessRequest
      * @throws IllegalArgumentException invalid password
      */
     private static List<RadiusAttribute> withPasswordAttribute(Dictionary dictionary, List<RadiusAttribute> attributes, String username, String password) {
@@ -56,6 +51,7 @@ public class AccessRequestMSChapV2 extends AccessRequest {
 
         // MS-CHAP-Challenge    
         // This Attribute contains the challenge sent by a NAS to a Microsoft Challenge-Handshake Authentication Protocol (MS-CHAP) user.
+
         //These two should be passed in as parameters
         final byte[] challenge = random16bytes();   // MS-CHAP-CHALLENGE,
         final byte[] peerChallenge = random16bytes();
@@ -82,12 +78,13 @@ public class AccessRequestMSChapV2 extends AccessRequest {
 
             //vendorID 311, Microsoft
             Dictionary dictionaryMS = DictionaryParser.newClasspathParser().parseDictionary("org/tinyradius/core/dictionary/freeradius/dictionary.microsoft");
-
+            // MS-CHAP-Challenge
             VendorSpecificAttribute vsa = new VendorSpecificAttribute(dictionaryMS, 311, Collections.singletonList(
                     dictionaryMS.createAttribute(311, 11,challenge)
             ));
             newAttributes.add(vsa);
 
+            // MS-CHAP2-Response
             vsa = new VendorSpecificAttribute(dictionaryMS, 311, Collections.singletonList(
                     dictionaryMS.createAttribute(311, 25,msChap2Challenge)
             ));
