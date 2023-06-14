@@ -54,6 +54,22 @@ public class TestClient {
         final String user = args[2];
         final String pass = args[3];
 
+        // Enter data using BufferReader
+        BufferedReader reader = new BufferedReader(
+                new InputStreamReader(System.in));
+
+        // Reading data using readLine
+        System.out.println("Please enter OTP code:");
+        String otpCode = "123456";
+        try {
+            otpCode = reader.readLine();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        // Printing the read line
+        System.out.println(otpCode);
+
         final NioEventLoopGroup eventLoopGroup = new NioEventLoopGroup(4);
 
         final Dictionary dictionary = DefaultDictionary.INSTANCE;
@@ -86,21 +102,7 @@ public class TestClient {
 //                .addAttribute("WISPr-Redirection-URL", "https://www.sourceforge.net/")
 //                .addAttribute("WISPr-Location-ID", "net.sourceforge.ap1");
 
-        // Enter data using BufferReader
-        BufferedReader reader = new BufferedReader(
-                new InputStreamReader(System.in));
 
-        // Reading data using readLine
-        System.out.println("Please enter OTP code:");
-        String otpCode = "123456";
-        try {
-            otpCode = reader.readLine();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        // Printing the read line
-        System.out.println(otpCode);
 
 
 //        logger.info("Packet before it is sent\n" + ar + "\n");
