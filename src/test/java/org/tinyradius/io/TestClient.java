@@ -12,6 +12,7 @@ import org.apache.logging.log4j.Logger;
 import org.tinyradius.core.RadiusPacketException;
 import org.tinyradius.core.dictionary.DefaultDictionary;
 import org.tinyradius.core.dictionary.Dictionary;
+import org.tinyradius.core.packet.PacketType;
 import org.tinyradius.core.packet.request.*;
 import org.tinyradius.core.packet.response.RadiusResponse;
 import org.tinyradius.io.client.RadiusClient;
@@ -107,7 +108,8 @@ public class TestClient {
 //        logger.info("Packet after it was sent\n" + ar + "\n");
         logger.info("Response\n" + response + "\n");
 
-        if (response.getType() == 11) {
+        if (response.getType() == PacketType.ACCESS_CHALLENGE) { //challenge packet
+            // State Attribute, we have to pass back to radius server for 2nd step login
             byte[] state = response.getAttribute(24).get().getValue();
 
             final AccessRequest ar2 = (AccessRequest)
@@ -131,19 +133,23 @@ public class TestClient {
             RadiusResponse response2 = rc.communicate(ar2, authEndpoint).syncUninterruptibly().getNow();
             logger.info("Response\n" + response2 + "\n");
 */
+            if(response2.getType() == PacketType.ACCESS_ACCEPT) {
+                System.out.println("Authentication is successful.");
+            }
+            else {
+                System.out.println("Access Denied!");
+            }
+        }
+        else {
+            if(response.getType() == PacketType.ACCESS_ACCEPT) {
+                System.out.println("Authentication is successful.");
+            }
+            else {
+                System.out.println("Access Denied!");
+            }
         }
 
         /*
-
-
-
-        final Future<RadiusResponse> future = rc.communicate(ar, authEndpoint);
-
-        await().until(future::isDone);
-//        assertTrue(future.isSuccess());
-//        assertSame(response, future.getNow());
-        logger.info("Response\n" + future.getNow() + "\n");
-
         // 2. Send Accounting-Request
 
         final AccountingRequest acc = (AccountingRequest) RadiusRequest.create(dictionary, ACCOUNTING_REQUEST, (byte) 2, null, new ArrayList<>())
