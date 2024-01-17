@@ -45,7 +45,7 @@ public class TestClient {
      */
     public static void main(String[] args) throws RadiusPacketException {
         if (args.length != 4) {
-            logger.info("Usage: TestClient [hostName] [sharedSecret] [userName] [password]");
+            System.out.println("Usage: TestClient [hostName] [sharedSecret] [userName] [password]");
             return;
         }
 
@@ -179,14 +179,14 @@ public class TestClient {
             ar1 = (AccessRequestPap)
                     ((AccessRequest) RadiusRequest.create(dictionary, ACCESS_REQUEST, (byte) 1, null, Collections.emptyList()))
                             .withPapPassword(pass)
-                            .addAttribute("User-Name", user)
-                            .addAttribute("NAS-IP-Address", "192.168.222.1");
+                            .addAttribute("User-Name", user);
+//                            .addAttribute("NAS-IP-Address", "192.168.222.1");
         } catch (RadiusPacketException e) {
             e.printStackTrace();
             return;
         }
         RadiusResponse response = rc.communicate(ar1, authEndpoint).syncUninterruptibly().getNow();
-        logger.info("Response\n" + response + "\n");
+        System.out.println("Response\n" + response + "\n");
 
         if (response.getType() == PacketType.ACCESS_CHALLENGE) { //challenge packet
             // State Attribute, we have to pass back to radius server for 2nd step login
@@ -198,15 +198,15 @@ public class TestClient {
                         ((AccessRequest) RadiusRequest.create(dictionary, ACCESS_REQUEST, (byte) 1, null, Collections.emptyList()))
                                 .withPapPassword(otpCode)
                                 .addAttribute("User-Name", user)
-                                .addAttribute(dictionary.createAttribute(-1, 24, state))
-                                .addAttribute("NAS-IP-Address", "192.168.222.1");
+                                .addAttribute(dictionary.createAttribute(-1, 24, state));
+//                                .addAttribute("NAS-IP-Address", "192.168.222.1");
             } catch (RadiusPacketException e) {
                 e.printStackTrace();
                 return;
             }
 
             RadiusResponse response2 = rc.communicate(ar2, authEndpoint).syncUninterruptibly().getNow();
-            logger.info("Response\n" + response2 + "\n");
+            System.out.println("Response\n" + response2 + "\n");
 
             if(response2.getType() == PacketType.ACCESS_ACCEPT) {
                 System.out.println("Authentication is successful.");
