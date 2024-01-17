@@ -91,6 +91,10 @@ public class TestClient {
         final RadiusEndpoint authEndpoint = new RadiusEndpoint(new InetSocketAddress(host, 1812), shared);
 //        final RadiusEndpoint acctEndpoint = new RadiusEndpoint(new InetSocketAddress(host, 1813), shared);
 
+
+        tryPAP(rc, dictionary, authEndpoint, user, pass, otpCode);
+
+/*
         // 1. Send Access-Request
         final AccessRequest ar = (AccessRequest)
                 ((AccessRequest) RadiusRequest.create(dictionary, ACCESS_REQUEST, (byte) 1, null, Collections.emptyList()))
@@ -124,7 +128,7 @@ public class TestClient {
             RadiusResponse response2 = rc.communicate(ar2, authEndpoint).syncUninterruptibly().getNow();
             logger.info("Response\n" + response2 + "\n");
 
-            /*
+
             // 1. Send Access-Request
             final AccessRequestPap ar2 = (AccessRequestPap)
                     ((AccessRequest) RadiusRequest.create(dictionary, ACCESS_REQUEST, (byte) 1, null, Collections.emptyList()))
@@ -134,7 +138,7 @@ public class TestClient {
                             .addAttribute("NAS-IP-Address", "192.168.222.1");
             RadiusResponse response2 = rc.communicate(ar2, authEndpoint).syncUninterruptibly().getNow();
             logger.info("Response\n" + response2 + "\n");
-*/
+
             if(response2.getType() == PacketType.ACCESS_ACCEPT) {
                 System.out.println("Authentication is successful.");
             }
@@ -151,7 +155,7 @@ public class TestClient {
             }
         }
 
-        /*
+
         // 2. Send Accounting-Request
 
         final AccountingRequest acc = (AccountingRequest) RadiusRequest.create(dictionary, ACCOUNTING_REQUEST, (byte) 2, null, new ArrayList<>())
@@ -166,5 +170,61 @@ public class TestClient {
         logger.info("Response: " + response);
 */
         rc.close();
+    }
+    
+    private static void tryPAP(RadiusClient rc, Dictionary dictionary, RadiusEndpoint authEndpoint, String user, String pass, String otpCode) {
+        // 1. Send Access-Request
+        final AccessRequestPap ar1;
+        try {
+            ar1 = (AccessRequestPap)
+                    ((AccessRequest) RadiusRequest.create(dictionary, ACCESS_REQUEST, (byte) 1, null, Collections.emptyList()))
+                            .withPapPassword(pass)
+                            .addAttribute("User-Name", user)
+                            .addAttribute("NAS-IP-Address", "192.168.222.1");
+        } catch (RadiusPacketException e) {
+            e.printStackTrace();
+            return;
+        }
+        RadiusResponse response = rc.communicate(ar1, authEndpoint).syncUninterruptibly().getNow();
+        logger.info("Response\n" + response + "\n");
+
+        if (response.getType() == PacketType.ACCESS_CHALLENGE) { //challenge packet
+            // State Attribute, we have to pass back to radius server for 2nd step login
+            byte[] state = response.getAttribute(24).get().getValue();
+
+            final AccessRequestPap ar2;
+            try {
+                ar2 = (AccessRequestPap)
+                        ((AccessRequest) RadiusRequest.create(dictionary, ACCESS_REQUEST, (byte) 1, null, Collections.emptyList()))
+                                .withPapPassword(otpCode)
+                                .addAttribute("User-Name", user)
+                                .addAttribute(dictionary.createAttribute(-1, 24, state))
+                                .addAttribute("NAS-IP-Address", "192.168.222.1");
+            } catch (RadiusPacketException e) {
+                e.printStackTrace();
+                return;
+            }
+
+            RadiusResponse response2 = rc.communicate(ar2, authEndpoint).syncUninterruptibly().getNow();
+            logger.info("Response\n" + response2 + "\n");
+
+            if(response2.getType() == PacketType.ACCESS_ACCEPT) {
+                System.out.println("Authentication is successful.");
+            }
+            else {
+                System.out.println("Access Denied!");
+            }
+        }
+        else {
+            if(response.getType() == PacketType.ACCESS_ACCEPT) {
+                System.out.println("Authentication is successful.");
+            }
+            else {
+                System.out.println("Access Denied!");
+            }
+        }
+
+            
+        
     }
 }
