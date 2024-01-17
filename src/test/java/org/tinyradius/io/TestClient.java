@@ -68,7 +68,7 @@ public class TestClient {
         }
 
         // Printing the read line
-        System.out.println(otpCode);
+//        System.out.println(otpCode);
 
         final NioEventLoopGroup eventLoopGroup = new NioEventLoopGroup(4);
 
@@ -170,6 +170,7 @@ public class TestClient {
         logger.info("Response: " + response);
 */
         rc.close();
+
     }
     
     private static void tryPAP(RadiusClient rc, Dictionary dictionary, RadiusEndpoint authEndpoint, String user, String pass, String otpCode) {
@@ -186,7 +187,7 @@ public class TestClient {
             return;
         }
         RadiusResponse response = rc.communicate(ar1, authEndpoint).syncUninterruptibly().getNow();
-        System.out.println("Response\n" + response + "\n");
+        System.out.println("Response from the server:\n\n" + response + "\n");
 
         if (response.getType() == PacketType.ACCESS_CHALLENGE) { //challenge packet
             // State Attribute, we have to pass back to radius server for 2nd step login
@@ -206,7 +207,7 @@ public class TestClient {
             }
 
             RadiusResponse response2 = rc.communicate(ar2, authEndpoint).syncUninterruptibly().getNow();
-            System.out.println("Response\n" + response2 + "\n");
+            System.out.println("Response from the server:\n\n" + response2 + "\n");
 
             if(response2.getType() == PacketType.ACCESS_ACCEPT) {
                 System.out.println("Authentication is successful.");
