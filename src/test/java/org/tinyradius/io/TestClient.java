@@ -44,8 +44,10 @@ public class TestClient {
      * @param args [host, sharedSecret, username, password]
      */
     public static void main(String[] args) throws RadiusPacketException {
-        if (args.length != 4) {
-            System.out.println("Usage: TestClient [hostName] [sharedSecret] [userName] [password]");
+        if (args.length != 5) {
+            System.out.println("Usage: TestClient [hostName] [sharedSecret] [userName] [password] [protocol]");
+            System.out.println("protocol: 1=PAP, 2=MSCHAPv2 then OTP, 3=MSCHAPv2 then MSCHAPv2");
+
             return;
         }
 
@@ -53,7 +55,7 @@ public class TestClient {
         final String shared = args[1];
         final String user = args[2];
         final String pass = args[3];
-
+        final String protocol = args[4];
         // Enter data using BufferReader
         BufferedReader reader = new BufferedReader(
                 new InputStreamReader(System.in));
@@ -92,8 +94,20 @@ public class TestClient {
 //        final RadiusEndpoint acctEndpoint = new RadiusEndpoint(new InetSocketAddress(host, 1813), shared);
 
 
-//        tryPAP(rc, dictionary, authEndpoint, user, pass, otpCode);
-        tryMSCHAPv2Half(rc, dictionary, authEndpoint, user, pass, otpCode);
+        switch (protocol) {
+            case "1":
+                System.out.println("PAP on both steps.");
+                tryPAP(rc, dictionary, authEndpoint, user, pass, otpCode);
+                break;
+            case "2":
+                System.out.println("MSCHAPv2 on the first step, but PAP on the second step.");
+                tryMSCHAPv2Half(rc, dictionary, authEndpoint, user, pass, otpCode);
+                break;
+            default:
+                System.out.println("MSCHAPv2 on both steps.");
+                tryMSCHAPv2(rc, dictionary, authEndpoint, user, pass, otpCode);
+                break;
+        }
 
 /*
         // 1. Send Access-Request
@@ -278,6 +292,60 @@ public class TestClient {
                 System.out.println("Access Denied!");
             }
         }
-    }    
-    
+    }
+
+    // 2nd step also MSCHAPv2
+    private static void tryMSCHAPv2(RadiusClient rc, Dictionary dictionary, RadiusEndpoint authEndpoint, String user, String pass, String otpCode) {
+        // 1. Send Access-Request
+        final AccessRequest ar1;
+        try {
+            ar1 = (AccessRequest)
+                    ((AccessRequest) RadiusRequest.create(dictionary, ACCESS_REQUEST, (byte) 1, null, Collections.emptyList()))
+                            .withMSCHapv2Password(user, pass)
+                            .addAttribute("User-Name", user);
+//                            .addAttribute("NAS-IP-Address", "192.168.222.1");
+        } catch (RadiusPacketException e) {
+            e.printStackTrace();
+            return;
+        }
+        RadiusResponse response = rc.communicate(ar1, authEndpoint).syncUninterruptibly().getNow();
+        System.out.println("Response from the server:\n\n" + response + "\n");
+
+        if (response.getType() == PacketType.ACCESS_CHALLENGE) { //challenge packet
+            // State Attribute, we have to pass back to radius server for 2nd step login
+            byte[] state = response.getAttribute(24).get().getValue();
+
+            final AccessRequest ar2;
+            try {
+                ar2 = (AccessRequest)
+                        ((AccessRequest) RadiusRequest.create(dictionary, ACCESS_REQUEST, (byte) 1, null, Collections.emptyList()))
+                                .withMSCHapv2Password(user, otpCode)
+                                .addAttribute("User-Name", user)
+                                .addAttribute(dictionary.createAttribute(-1, 24, state));
+//                                .addAttribute("NAS-IP-Address", "192.168.222.1");
+            } catch (RadiusPacketException e) {
+                e.printStackTrace();
+                return;
+            }
+
+            RadiusResponse response2 = rc.communicate(ar2, authEndpoint).syncUninterruptibly().getNow();
+            System.out.println("Response from the server:\n\n" + response2 + "\n");
+
+            if(response2.getType() == PacketType.ACCESS_ACCEPT) {
+                System.out.println("Authentication is successful.");
+            }
+            else {
+                System.out.println("Access Denied!");
+            }
+        }
+        else {
+            if(response.getType() == PacketType.ACCESS_ACCEPT) {
+                System.out.println("Authentication is successful.");
+            }
+            else {
+                System.out.println("Access Denied!");
+            }
+        }
+    }
+
 }
