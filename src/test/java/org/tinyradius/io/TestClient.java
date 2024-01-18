@@ -92,7 +92,8 @@ public class TestClient {
 //        final RadiusEndpoint acctEndpoint = new RadiusEndpoint(new InetSocketAddress(host, 1813), shared);
 
 
-        tryPAP(rc, dictionary, authEndpoint, user, pass, otpCode);
+//        tryPAP(rc, dictionary, authEndpoint, user, pass, otpCode);
+        tryMSCHAPv2Half(rc, dictionary, authEndpoint, user, pass, otpCode);
 
 /*
         // 1. Send Access-Request
@@ -224,8 +225,59 @@ public class TestClient {
                 System.out.println("Access Denied!");
             }
         }
-
-            
-        
     }
+    
+    private static void tryMSCHAPv2Half(RadiusClient rc, Dictionary dictionary, RadiusEndpoint authEndpoint, String user, String pass, String otpCode) {
+        // 1. Send Access-Request
+        final AccessRequest ar1;
+        try {
+            ar1 = (AccessRequest)
+                    ((AccessRequest) RadiusRequest.create(dictionary, ACCESS_REQUEST, (byte) 1, null, Collections.emptyList()))
+                            .withMSCHapv2Password(user, pass)
+                            .addAttribute("User-Name", user);
+//                            .addAttribute("NAS-IP-Address", "192.168.222.1");
+        } catch (RadiusPacketException e) {
+            e.printStackTrace();
+            return;
+        }
+        RadiusResponse response = rc.communicate(ar1, authEndpoint).syncUninterruptibly().getNow();
+        System.out.println("Response from the server:\n\n" + response + "\n");
+
+        if (response.getType() == PacketType.ACCESS_CHALLENGE) { //challenge packet
+            // State Attribute, we have to pass back to radius server for 2nd step login
+            byte[] state = response.getAttribute(24).get().getValue();
+
+            final AccessRequestPap ar2;
+            try {
+                ar2 = (AccessRequestPap)
+                        ((AccessRequest) RadiusRequest.create(dictionary, ACCESS_REQUEST, (byte) 1, null, Collections.emptyList()))
+                                .withPapPassword(otpCode)
+                                .addAttribute("User-Name", user)
+                                .addAttribute(dictionary.createAttribute(-1, 24, state));
+//                                .addAttribute("NAS-IP-Address", "192.168.222.1");
+            } catch (RadiusPacketException e) {
+                e.printStackTrace();
+                return;
+            }
+
+            RadiusResponse response2 = rc.communicate(ar2, authEndpoint).syncUninterruptibly().getNow();
+            System.out.println("Response from the server:\n\n" + response2 + "\n");
+
+            if(response2.getType() == PacketType.ACCESS_ACCEPT) {
+                System.out.println("Authentication is successful.");
+            }
+            else {
+                System.out.println("Access Denied!");
+            }
+        }
+        else {
+            if(response.getType() == PacketType.ACCESS_ACCEPT) {
+                System.out.println("Authentication is successful.");
+            }
+            else {
+                System.out.println("Access Denied!");
+            }
+        }
+    }    
+    
 }
