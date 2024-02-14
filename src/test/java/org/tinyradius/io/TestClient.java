@@ -211,7 +211,7 @@ public class TestClient {
             final AccessRequestPap ar2;
             try {
                 ar2 = (AccessRequestPap)
-                        ((AccessRequest) RadiusRequest.create(dictionary, ACCESS_REQUEST, (byte) 1, null, Collections.emptyList()))
+                        ((AccessRequest) RadiusRequest.create(dictionary, ACCESS_REQUEST, (byte) 2, null, Collections.emptyList()))
                                 .withPapPassword(otpCode)
                                 .addAttribute("User-Name", user)
                                 .addAttribute(dictionary.createAttribute(-1, 24, state));
@@ -264,7 +264,7 @@ public class TestClient {
             final AccessRequestPap ar2;
             try {
                 ar2 = (AccessRequestPap)
-                        ((AccessRequest) RadiusRequest.create(dictionary, ACCESS_REQUEST, (byte) 1, null, Collections.emptyList()))
+                        ((AccessRequest) RadiusRequest.create(dictionary, ACCESS_REQUEST, (byte) 2, null, Collections.emptyList()))
                                 .withPapPassword(otpCode)
                                 .addAttribute("User-Name", user)
                                 .addAttribute(dictionary.createAttribute(-1, 24, state));
@@ -318,7 +318,7 @@ public class TestClient {
             final AccessRequest ar2;
             try {
                 ar2 = (AccessRequest)
-                        ((AccessRequest) RadiusRequest.create(dictionary, ACCESS_REQUEST, (byte) 1, null, Collections.emptyList()))
+                        ((AccessRequest) RadiusRequest.create(dictionary, ACCESS_REQUEST, (byte) 2, null, Collections.emptyList()))
                                 .withMSCHapv2Password(user, otpCode)
                                 .addAttribute("User-Name", user)
                                 .addAttribute(dictionary.createAttribute(-1, 24, state));
