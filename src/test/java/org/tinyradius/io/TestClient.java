@@ -56,15 +56,24 @@ public class TestClient {
         final String user = args[2];
         final String pass = args[3];
         final String protocol = args[4];
+
+        String[] userInput={"123456","1234"};
         // Enter data using BufferReader
         BufferedReader reader = new BufferedReader(
                 new InputStreamReader(System.in));
 
         // Reading data using readLine
-        System.out.println("Please enter OTP code:");
-        String otpCode = "123456";
+        System.out.println("Please enter PIN:");
         try {
-            otpCode = reader.readLine();
+            userInput[1] = reader.readLine();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        // Reading data using readLine
+        System.out.println("Please enter OTP code:");
+        try {
+            userInput[0] = reader.readLine();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -97,15 +106,15 @@ public class TestClient {
         switch (protocol) {
             case "1":
                 System.out.println("PAP on both steps.");
-                tryPAP(rc, dictionary, authEndpoint, user, pass, otpCode);
+                tryPAP(rc, dictionary, authEndpoint, user, pass, userInput);
                 break;
             case "2":
                 System.out.println("MSCHAPv2 on the first step, but PAP on the second step.");
-                tryMSCHAPv2Half(rc, dictionary, authEndpoint, user, pass, otpCode);
+                tryMSCHAPv2Half(rc, dictionary, authEndpoint, user, pass, userInput);
                 break;
             default:
                 System.out.println("MSCHAPv2 on both steps.");
-                tryMSCHAPv2(rc, dictionary, authEndpoint, user, pass, otpCode);
+                tryMSCHAPv2(rc, dictionary, authEndpoint, user, pass, userInput);
                 break;
         }
 
@@ -188,7 +197,7 @@ public class TestClient {
 
     }
     
-    private static void tryPAP(RadiusClient rc, Dictionary dictionary, RadiusEndpoint authEndpoint, String user, String pass, String otpCode) {
+    private static void tryPAP(RadiusClient rc, Dictionary dictionary, RadiusEndpoint authEndpoint, String user, String pass, String[] codes) {
         // 1. Send Access-Request
         final AccessRequestPap ar1;
         try {
@@ -204,44 +213,62 @@ public class TestClient {
         RadiusResponse response = rc.communicate(ar1, authEndpoint).syncUninterruptibly().getNow();
         System.out.println("Response from the server:\n\n" + response + "\n");
 
-        if (response.getType() == PacketType.ACCESS_CHALLENGE) { //challenge packet
-            // State Attribute, we have to pass back to radius server for 2nd step login
-            byte[] state = response.getAttribute(24).get().getValue();
+        byte resType = response.getType();
 
-            final AccessRequestPap ar2;
-            try {
-                ar2 = (AccessRequestPap)
-                        ((AccessRequest) RadiusRequest.create(dictionary, ACCESS_REQUEST, (byte) 2, null, Collections.emptyList()))
-                                .withPapPassword(otpCode)
-                                .addAttribute("User-Name", user)
-                                .addAttribute(dictionary.createAttribute(-1, 24, state));
+        int index = 0;
+        while(true)  {
+            if (resType == PacketType.ACCESS_CHALLENGE) { //challenge packet
+                // State Attribute, we have to pass back to radius server for 2nd step login
+                byte[] state = response.getAttribute(24).get().getValue();
+
+                final AccessRequestPap ar2;
+                try {
+                    ar2 = (AccessRequestPap)
+                            ((AccessRequest) RadiusRequest.create(dictionary, ACCESS_REQUEST, (byte) 2, null, Collections.emptyList()))
+                                    .withPapPassword(codes[index])
+                                    .addAttribute("User-Name", user)
+                                    .addAttribute(dictionary.createAttribute(-1, 24, state));
 //                                .addAttribute("NAS-IP-Address", "192.168.222.1");
-            } catch (RadiusPacketException e) {
-                e.printStackTrace();
-                return;
-            }
+                } catch (RadiusPacketException e) {
+                    e.printStackTrace();
+                    return;
+                }
 
-            RadiusResponse response2 = rc.communicate(ar2, authEndpoint).syncUninterruptibly().getNow();
-            System.out.println("Response from the server:\n\n" + response2 + "\n");
+                index++;
+                RadiusResponse response2 = rc.communicate(ar2, authEndpoint).syncUninterruptibly().getNow();
+                System.out.println("Response from the server:\n\n" + response2 + "\n");
 
-            if(response2.getType() == PacketType.ACCESS_ACCEPT) {
-                System.out.println("Authentication is successful.");
+                resType = response2.getType();
+                if(resType == PacketType.ACCESS_CHALLENGE) {
+                    continue;
+                }
+
+                if(resType == PacketType.ACCESS_ACCEPT) {
+                    System.out.println("Authentication is successful.");
+                }
+                else  {
+                    System.out.println("Access Denied!");
+                }
+                break;
             }
             else {
-                System.out.println("Access Denied!");
+                if(resType == PacketType.ACCESS_ACCEPT) {
+                    System.out.println("Authentication is successful.");
+                }
+                else {
+                    System.out.println("Access Denied!");
+                }
+                break;
             }
         }
-        else {
-            if(response.getType() == PacketType.ACCESS_ACCEPT) {
-                System.out.println("Authentication is successful.");
-            }
-            else {
-                System.out.println("Access Denied!");
-            }
-        }
+
+
+
+
+
     }
     
-    private static void tryMSCHAPv2Half(RadiusClient rc, Dictionary dictionary, RadiusEndpoint authEndpoint, String user, String pass, String otpCode) {
+    private static void tryMSCHAPv2Half(RadiusClient rc, Dictionary dictionary, RadiusEndpoint authEndpoint, String user, String pass, String[] codes) {
         // 1. Send Access-Request
         final AccessRequest ar1;
         try {
@@ -265,7 +292,7 @@ public class TestClient {
             try {
                 ar2 = (AccessRequestPap)
                         ((AccessRequest) RadiusRequest.create(dictionary, ACCESS_REQUEST, (byte) 2, null, Collections.emptyList()))
-                                .withPapPassword(otpCode)
+                                .withPapPassword(codes[0])
                                 .addAttribute("User-Name", user)
                                 .addAttribute(dictionary.createAttribute(-1, 24, state));
 //                                .addAttribute("NAS-IP-Address", "192.168.222.1");
@@ -295,7 +322,7 @@ public class TestClient {
     }
 
     // 2nd step also MSCHAPv2
-    private static void tryMSCHAPv2(RadiusClient rc, Dictionary dictionary, RadiusEndpoint authEndpoint, String user, String pass, String otpCode) {
+    private static void tryMSCHAPv2(RadiusClient rc, Dictionary dictionary, RadiusEndpoint authEndpoint, String user, String pass, String[] codes) {
         // 1. Send Access-Request
         final AccessRequest ar1;
         try {
@@ -319,7 +346,7 @@ public class TestClient {
             try {
                 ar2 = (AccessRequest)
                         ((AccessRequest) RadiusRequest.create(dictionary, ACCESS_REQUEST, (byte) 2, null, Collections.emptyList()))
-                                .withMSCHapv2Password(user, otpCode)
+                                .withMSCHapv2Password(user, codes[0])
                                 .addAttribute("User-Name", user)
                                 .addAttribute(dictionary.createAttribute(-1, 24, state));
 //                                .addAttribute("NAS-IP-Address", "192.168.222.1");
