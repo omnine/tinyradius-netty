@@ -214,12 +214,15 @@ public class TestClient {
         System.out.println("Response from the server:\n\n" + response + "\n");
 
         byte resType = response.getType();
+        byte[] state={30,40};
+        if (resType == PacketType.ACCESS_CHALLENGE) { //challenge packet
+            // State Attribute, we have to pass back to radius server for 2nd step login
+            state = response.getAttribute(24).get().getValue();
+        }
 
         int index = 0;
         while(true)  {
             if (resType == PacketType.ACCESS_CHALLENGE) { //challenge packet
-                // State Attribute, we have to pass back to radius server for 2nd step login
-                byte[] state = response.getAttribute(24).get().getValue();
 
                 final AccessRequestPap ar2;
                 try {
@@ -240,6 +243,8 @@ public class TestClient {
 
                 resType = response2.getType();
                 if(resType == PacketType.ACCESS_CHALLENGE) {
+                    // State Attribute, we have to pass back to radius server for 2nd step login
+                    state = response2.getAttribute(24).get().getValue();
                     continue;
                 }
 
