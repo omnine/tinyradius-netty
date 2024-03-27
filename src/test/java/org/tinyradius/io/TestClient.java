@@ -61,34 +61,6 @@ public class TestClient {
         final String pass = args[3];
         final String protocol = args[4];
 
-        String[] userInput={"123456","1234"};
-
-        /*
-        // Enter data using BufferReader
-        BufferedReader reader = new BufferedReader(
-                new InputStreamReader(System.in));
-
-        // Reading data using readLine
-        System.out.println("Please enter PIN:");
-        try {
-            userInput[1] = reader.readLine();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        // Reading data using readLine
-        System.out.println("Please enter OTP code:");
-        try {
-            userInput[0] = reader.readLine();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        */
-
-
-        // Printing the read line
-//        System.out.println(otpCode);
-
         final NioEventLoopGroup eventLoopGroup = new NioEventLoopGroup(4);
 
         final Dictionary dictionary = DefaultDictionary.INSTANCE;
@@ -114,15 +86,15 @@ public class TestClient {
         switch (protocol) {
             case "1":
                 System.out.println("PAP on both steps.");
-                tryPAP(rc, dictionary, authEndpoint, user, pass, userInput);
+                tryPAP(rc, dictionary, authEndpoint, user);
                 break;
             case "2":
                 System.out.println("MSCHAPv2 on the first step, but PAP on the second step.");
-                tryMSCHAPv2Half(rc, dictionary, authEndpoint, user, pass, userInput);
+                tryMSCHAPv2Half(rc, dictionary, authEndpoint, user);
                 break;
             default:
                 System.out.println("MSCHAPv2 on both steps.");
-                tryMSCHAPv2(rc, dictionary, authEndpoint, user, pass, userInput);
+                tryMSCHAPv2(rc, dictionary, authEndpoint, user);
                 break;
         }
 
@@ -205,7 +177,7 @@ public class TestClient {
 
     }
     
-    private static void tryPAP(RadiusClient rc, Dictionary dictionary, RadiusEndpoint authEndpoint, String user, String pass, String[] codes) {
+    private static void tryPAP(RadiusClient rc, Dictionary dictionary, RadiusEndpoint authEndpoint, String user) {
 
 
         BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
@@ -223,17 +195,17 @@ public class TestClient {
             }
 
             // 1. Send Access-Request
-            AccessRequestPap ar;
+            AccessRequest ar;
             try {
                 if(index>0) {
-                    ar = (AccessRequestPap)
+                    ar = (AccessRequest)
                             ((AccessRequest) RadiusRequest.create(dictionary, ACCESS_REQUEST, (byte)(index+1), null, Collections.emptyList()))
                                     .withPapPassword(strCode)
                                     .addAttribute(dictionary.createAttribute(-1, 24, state))
                                     .addAttribute("User-Name", user);
                 }
                 else {
-                    ar = (AccessRequestPap)
+                    ar = (AccessRequest)
                             ((AccessRequest) RadiusRequest.create(dictionary, ACCESS_REQUEST, (byte)(index+1), null, Collections.emptyList()))
                                     .withPapPassword(strCode)
                                     .addAttribute("User-Name", user);
@@ -274,7 +246,7 @@ public class TestClient {
 
     }
     
-    private static void tryMSCHAPv2Half(RadiusClient rc, Dictionary dictionary, RadiusEndpoint authEndpoint, String user, String pass, String[] codes) {
+    private static void tryMSCHAPv2Half(RadiusClient rc, Dictionary dictionary, RadiusEndpoint authEndpoint, String user) {
 
         BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
 
@@ -339,7 +311,7 @@ public class TestClient {
     }
 
     // 2nd step also MSCHAPv2
-    private static void tryMSCHAPv2(RadiusClient rc, Dictionary dictionary, RadiusEndpoint authEndpoint, String user, String pass, String[] codes) {
+    private static void tryMSCHAPv2(RadiusClient rc, Dictionary dictionary, RadiusEndpoint authEndpoint, String user) {
 
         BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
 
