@@ -52,6 +52,10 @@ Publish directly to Maven Central:
 ./gradlew publishToSonatype closeAndReleaseSonatypeStagingRepository
 ```
 
+## How to build
+At the moment, I haven't found a way to build a jar and add these dictionaries into it.
+![alt text](./doc/cutom_dictionary.png)
+
 ## License
 Copyright Matthias Wuttke and contributors:
 - http://tinyradius.sourceforge.net/
