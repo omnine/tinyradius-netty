@@ -275,56 +275,67 @@ public class TestClient {
     }
     
     private static void tryMSCHAPv2Half(RadiusClient rc, Dictionary dictionary, RadiusEndpoint authEndpoint, String user, String pass, String[] codes) {
-        // 1. Send Access-Request
-        final AccessRequest ar1;
-        try {
-            ar1 = (AccessRequest)
-                    ((AccessRequest) RadiusRequest.create(dictionary, ACCESS_REQUEST, (byte) 1, null, Collections.emptyList()))
-                            .withMSCHapv2Password(user, pass)
-                            .addAttribute("User-Name", user);
-//                            .addAttribute("NAS-IP-Address", "192.168.222.1");
-        } catch (RadiusPacketException e) {
-            e.printStackTrace();
-            return;
-        }
-        RadiusResponse response = rc.communicate(ar1, authEndpoint).syncUninterruptibly().getNow();
-        System.out.println("Response from the server:\n\n" + response + "\n");
 
-        if (response.getType() == PacketType.ACCESS_CHALLENGE) { //challenge packet
-            // State Attribute, we have to pass back to radius server for 2nd step login
-            byte[] state = response.getAttribute(24).get().getValue();
+        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
 
-            final AccessRequestPap ar2;
+        String strPrompt = "Please enter AD password:";
+        byte[] state={30,40};
+        int index = 0;
+        while(true)  {
+            System.out.println(strPrompt);
+            String strCode="";
             try {
-                ar2 = (AccessRequestPap)
-                        ((AccessRequest) RadiusRequest.create(dictionary, ACCESS_REQUEST, (byte) 2, null, Collections.emptyList()))
-                                .withPapPassword(codes[0])
-                                .addAttribute("User-Name", user)
-                                .addAttribute(dictionary.createAttribute(-1, 24, state));
-//                                .addAttribute("NAS-IP-Address", "192.168.222.1");
+                strCode = reader.readLine();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            // 1. Send Access-Request
+            AccessRequest ar;
+            try {
+                if(index>0) {
+                    ar = (AccessRequest)
+                            ((AccessRequest) RadiusRequest.create(dictionary, ACCESS_REQUEST, (byte)(index+1), null, Collections.emptyList()))
+                                    .withPapPassword(strCode)
+                                    .addAttribute(dictionary.createAttribute(-1, 24, state))
+                                    .addAttribute("User-Name", user);
+                }
+                else {
+                    ar = (AccessRequest)
+                            ((AccessRequest) RadiusRequest.create(dictionary, ACCESS_REQUEST, (byte)(index+1), null, Collections.emptyList()))
+                                    .withMSCHapv2Password(user, strCode)
+                                    .addAttribute("User-Name", user);
+                }
+
             } catch (RadiusPacketException e) {
                 e.printStackTrace();
                 return;
             }
 
-            RadiusResponse response2 = rc.communicate(ar2, authEndpoint).syncUninterruptibly().getNow();
-            System.out.println("Response from the server:\n\n" + response2 + "\n");
+            RadiusResponse response = rc.communicate(ar, authEndpoint).syncUninterruptibly().getNow();
+//            System.out.println("Response from the server:\n\n" + response + "\n");
 
-            if(response2.getType() == PacketType.ACCESS_ACCEPT) {
-                System.out.println("Authentication is successful.");
+            byte resType = response.getType();
+
+
+            index++;
+            if (resType == PacketType.ACCESS_CHALLENGE) { //challenge packet
+                // State Attribute, we have to pass back to radius server for 2nd step login
+                state = response.getAttribute(24).get().getValue();
+                strPrompt = response.getAttribute(18).get().getValueString();
+                continue;
             }
             else {
-                System.out.println("Access Denied!");
+                if(resType == PacketType.ACCESS_ACCEPT) {
+                    System.out.println("Authentication is successful.");
+                }
+                else {
+                    System.out.println("Access Denied!");
+                }
+                break;
             }
         }
-        else {
-            if(response.getType() == PacketType.ACCESS_ACCEPT) {
-                System.out.println("Authentication is successful.");
-            }
-            else {
-                System.out.println("Access Denied!");
-            }
-        }
+
     }
 
     // 2nd step also MSCHAPv2
@@ -345,17 +356,17 @@ public class TestClient {
             }
 
             // 1. Send Access-Request
-            AccessRequestPap ar;
+            AccessRequest ar;
             try {
                 if(index>0) {
-                    ar = (AccessRequestPap)
+                    ar = (AccessRequest)
                             ((AccessRequest) RadiusRequest.create(dictionary, ACCESS_REQUEST, (byte)(index+1), null, Collections.emptyList()))
                                     .withMSCHapv2Password(user, strCode)
                                     .addAttribute(dictionary.createAttribute(-1, 24, state))
                                     .addAttribute("User-Name", user);
                 }
                 else {
-                    ar = (AccessRequestPap)
+                    ar = (AccessRequest)
                             ((AccessRequest) RadiusRequest.create(dictionary, ACCESS_REQUEST, (byte)(index+1), null, Collections.emptyList()))
                                     .withMSCHapv2Password(user, strCode)
                                     .addAttribute("User-Name", user);
