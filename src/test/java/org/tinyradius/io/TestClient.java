@@ -58,6 +58,8 @@ public class TestClient {
         final String protocol = args[4];
 
         String[] userInput={"123456","1234"};
+
+        /*
         // Enter data using BufferReader
         BufferedReader reader = new BufferedReader(
                 new InputStreamReader(System.in));
@@ -77,6 +79,8 @@ public class TestClient {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        */
+
 
         // Printing the read line
 //        System.out.println(otpCode);
@@ -198,63 +202,57 @@ public class TestClient {
     }
     
     private static void tryPAP(RadiusClient rc, Dictionary dictionary, RadiusEndpoint authEndpoint, String user, String pass, String[] codes) {
-        // 1. Send Access-Request
-        final AccessRequestPap ar1;
-        try {
-            ar1 = (AccessRequestPap)
-                    ((AccessRequest) RadiusRequest.create(dictionary, ACCESS_REQUEST, (byte) 1, null, Collections.emptyList()))
-                            .withPapPassword(pass)
-                            .addAttribute("User-Name", user);
-//                            .addAttribute("NAS-IP-Address", "192.168.222.1");
-        } catch (RadiusPacketException e) {
-            e.printStackTrace();
-            return;
-        }
-        RadiusResponse response = rc.communicate(ar1, authEndpoint).syncUninterruptibly().getNow();
-        System.out.println("Response from the server:\n\n" + response + "\n");
 
-        byte resType = response.getType();
+
+        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+
+        String strPrompt = "Please enter AD password:";
         byte[] state={30,40};
-        if (resType == PacketType.ACCESS_CHALLENGE) { //challenge packet
-            // State Attribute, we have to pass back to radius server for 2nd step login
-            state = response.getAttribute(24).get().getValue();
-        }
-
         int index = 0;
         while(true)  {
+            System.out.println("Nanoart: "+ strPrompt);
+            String strCode="";
+            try {
+                strCode = reader.readLine();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            // 1. Send Access-Request
+            AccessRequestPap ar;
+            try {
+                if(index>0) {
+                    System.out.println("Add State.");
+                    ar = (AccessRequestPap)
+                            ((AccessRequest) RadiusRequest.create(dictionary, ACCESS_REQUEST, (byte)(index+1), null, Collections.emptyList()))
+                                    .withPapPassword(strCode)
+                                    .addAttribute(dictionary.createAttribute(-1, 24, state))
+                                    .addAttribute("User-Name", user);
+                }
+                else {
+                    ar = (AccessRequestPap)
+                            ((AccessRequest) RadiusRequest.create(dictionary, ACCESS_REQUEST, (byte)(index+1), null, Collections.emptyList()))
+                                    .withPapPassword(strCode)
+                                    .addAttribute("User-Name", user);
+                }
+
+            } catch (RadiusPacketException e) {
+                e.printStackTrace();
+                return;
+            }
+
+            RadiusResponse response = rc.communicate(ar, authEndpoint).syncUninterruptibly().getNow();
+//            System.out.println("Response from the server:\n\n" + response + "\n");
+
+            byte resType = response.getType();
+
+
+            index++;
             if (resType == PacketType.ACCESS_CHALLENGE) { //challenge packet
-
-                final AccessRequestPap ar2;
-                try {
-                    ar2 = (AccessRequestPap)
-                            ((AccessRequest) RadiusRequest.create(dictionary, ACCESS_REQUEST, (byte) 2, null, Collections.emptyList()))
-                                    .withPapPassword(codes[index])
-                                    .addAttribute("User-Name", user)
-                                    .addAttribute(dictionary.createAttribute(-1, 24, state));
-//                                .addAttribute("NAS-IP-Address", "192.168.222.1");
-                } catch (RadiusPacketException e) {
-                    e.printStackTrace();
-                    return;
-                }
-
-                index++;
-                RadiusResponse response2 = rc.communicate(ar2, authEndpoint).syncUninterruptibly().getNow();
-                System.out.println("Response from the server:\n\n" + response2 + "\n");
-
-                resType = response2.getType();
-                if(resType == PacketType.ACCESS_CHALLENGE) {
-                    // State Attribute, we have to pass back to radius server for 2nd step login
-                    state = response2.getAttribute(24).get().getValue();
-                    continue;
-                }
-
-                if(resType == PacketType.ACCESS_ACCEPT) {
-                    System.out.println("Authentication is successful.");
-                }
-                else  {
-                    System.out.println("Access Denied!");
-                }
-                break;
+                // State Attribute, we have to pass back to radius server for 2nd step login
+                state = response.getAttribute(24).get().getValue();
+                strPrompt = response.getAttribute(18).get().getValueString();
+                continue;
             }
             else {
                 if(resType == PacketType.ACCESS_ACCEPT) {
