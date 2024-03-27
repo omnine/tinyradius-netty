@@ -7,8 +7,10 @@ import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.util.HashedWheelTimer;
 import io.netty.util.Timer;
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.config.Configurator;
 import org.tinyradius.core.RadiusPacketException;
 import org.tinyradius.core.dictionary.DefaultDictionary;
 import org.tinyradius.core.dictionary.Dictionary;
@@ -27,6 +29,7 @@ import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
 import java.util.Collections;
 
+
 import static org.tinyradius.core.packet.PacketType.ACCESS_REQUEST;
 
 
@@ -35,7 +38,6 @@ import static org.tinyradius.core.packet.PacketType.ACCESS_REQUEST;
  * TestClient shows how to send Radius Access-Request and Accounting-Request packets.
  */
 public class TestClient {
-
     private static final Logger logger = LogManager.getLogger();
 
     /**
@@ -50,6 +52,8 @@ public class TestClient {
 
             return;
         }
+
+        Configurator.setRootLevel(Level.WARN);  //change the log level
 
         final String host = args[0];
         final String shared = args[1];
@@ -222,7 +226,6 @@ public class TestClient {
             AccessRequestPap ar;
             try {
                 if(index>0) {
-                    System.out.println("Add State.");
                     ar = (AccessRequestPap)
                             ((AccessRequest) RadiusRequest.create(dictionary, ACCESS_REQUEST, (byte)(index+1), null, Collections.emptyList()))
                                     .withPapPassword(strCode)
