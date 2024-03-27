@@ -46,8 +46,8 @@ public class TestClient {
      * @param args [host, sharedSecret, username, password]
      */
     public static void main(String[] args) throws RadiusPacketException {
-        if (args.length != 5) {
-            System.out.println("Usage: TestClient [hostName] [sharedSecret] [userName] [password] [protocol]");
+        if (args.length != 4) {
+            System.out.println("Usage: TestClient [hostName] [sharedSecret] [userName] [protocol]");
             System.out.println("protocol: 1=PAP, 2=MSCHAPv2 then OTP, 3=MSCHAPv2 then MSCHAPv2");
 
             return;
@@ -58,8 +58,7 @@ public class TestClient {
         final String host = args[0];
         final String shared = args[1];
         final String user = args[2];
-        final String pass = args[3];
-        final String protocol = args[4];
+        final String protocol = args[3];
 
         final NioEventLoopGroup eventLoopGroup = new NioEventLoopGroup(4);
 
