@@ -97,7 +97,7 @@ public class TestClient {
         final Bootstrap bootstrap = new Bootstrap().group(eventLoopGroup).channel(NioDatagramChannel.class);
 
         final RadiusClient rc = new RadiusClient(
-                bootstrap, new InetSocketAddress(0), new FixedTimeoutHandler(timer), new ChannelInitializer<DatagramChannel>() {
+                bootstrap, new InetSocketAddress(0), new FixedTimeoutHandler(timer,5, 5000), new ChannelInitializer<DatagramChannel>() {
             @Override
             protected void initChannel(DatagramChannel ch) {
                 ch.pipeline().addLast(
@@ -214,7 +214,7 @@ public class TestClient {
         byte[] state={30,40};
         int index = 0;
         while(true)  {
-            System.out.println("Nanoart: "+ strPrompt);
+            System.out.println(strPrompt);
             String strCode="";
             try {
                 strCode = reader.readLine();
