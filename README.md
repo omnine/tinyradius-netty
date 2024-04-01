@@ -56,6 +56,13 @@ Publish directly to Maven Central:
 At the moment, I haven't found a way to build a jar and add these dictionaries into it.
 ![alt text](./doc/custom_dictionary.png)
 
+## How to run
+
+Please unzip the release package, then run the following command (tested with java 11),
+
+`java -jar tinyradius-netty.jar [hostName] [sharedSecret] [userName] [protocol]`
+`java -jar tinyradius-netty.jar 192.168.190.51 testing123 omnine 1`
+
 ## License
 Copyright Matthias Wuttke and contributors:
 - http://tinyradius.sourceforge.net/
