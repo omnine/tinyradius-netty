@@ -24,7 +24,7 @@ VALUE	MS-MPPE-Encryption-Policy	Encryption-Required	2
 
 # This is referred to as both singular and plural in the RFC.
 # Plural seems to make more sense.
-ATTRIBUTE	MS-MPPE-Encryption-Type			8	integer
+#ATTRIBUTE	MS-MPPE-Encryption-Type			8	integer
 ATTRIBUTE	MS-MPPE-Encryption-Types		8	integer
 
 VALUE	MS-MPPE-Encryption-Types	RC4-40bit-Allowed	1
