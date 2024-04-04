@@ -46,8 +46,8 @@ public class TestClient {
      * @param args [host, sharedSecret, username, password]
      */
     public static void main(String[] args) throws RadiusPacketException {
-        if (args.length != 4) {
-            System.out.println("Usage: TestClient [hostName] [sharedSecret] [userName] [protocol]");
+        if (args.length < 4) {
+            System.out.println("Usage: TestClient hostName sharedSecret userName protocol [timeout]");
             System.out.println("protocol: 1=PAP, 2=MSCHAPv2 then OTP, 3=MSCHAPv2 then MSCHAPv2");
 
             return;
@@ -60,6 +60,17 @@ public class TestClient {
         final String user = args[2];
         final String protocol = args[3];
 
+        int timeoutMs = 2000;
+        if(args.length > 4) {
+            try {
+                timeoutMs = Integer.parseInt(args[4]);
+                timeoutMs = timeoutMs*1000;
+
+            } catch (NumberFormatException e) {
+                System.out.println("Invalid integer input");
+            }
+        }
+
         final NioEventLoopGroup eventLoopGroup = new NioEventLoopGroup(4);
 
         final Dictionary dictionary = DefaultDictionary.INSTANCE;
@@ -68,7 +79,7 @@ public class TestClient {
         final Bootstrap bootstrap = new Bootstrap().group(eventLoopGroup).channel(NioDatagramChannel.class);
 
         final RadiusClient rc = new RadiusClient(
-                bootstrap, new InetSocketAddress(0), new FixedTimeoutHandler(timer,1, 2000), new ChannelInitializer<DatagramChannel>() {
+                bootstrap, new InetSocketAddress(0), new FixedTimeoutHandler(timer,1, timeoutMs), new ChannelInitializer<DatagramChannel>() {
             @Override
             protected void initChannel(DatagramChannel ch) {
                 ch.pipeline().addLast(
